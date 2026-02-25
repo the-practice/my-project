@@ -69,7 +69,7 @@ beautifulsoup4==4.12.3
 lxml==4.9.3
 
 # Optional: Vector Database (alternative to pgvector)
-qdrant-client==1.7.0
+qdrant-client>=1.7.1
 
 # Optional: Message Queue (for async processing)
 celery==5.3.6
