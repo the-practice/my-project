@@ -9,6 +9,7 @@ from twilio.request_validator import RequestValidator
 from twilio.twiml.voice_response import VoiceResponse, Gather, Say
 
 from app.core.config import settings
+from app.api.schemas import VapiWebhookRequest
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -80,7 +81,7 @@ async def twilio_webhook(request: Request) -> Dict[str, str]:
 
 
 @router.post("/vapi/stream")
-async def vapi_stream(request: Dict[str, Any]) -> Dict[str, Any]:
+async def vapi_stream(request: VapiWebhookRequest) -> Dict[str, Any]:
     """
     Vapi.ai real-time stream endpoint.
 
@@ -90,7 +91,7 @@ async def vapi_stream(request: Dict[str, Any]) -> Dict[str, Any]:
     - End of call reports
     - Status updates
     """
-    message_type = request.get("type", "unknown")
+    message_type = request.type
 
     logger.info(f"Vapi webhook: type={message_type}")
 
@@ -110,8 +111,8 @@ async def vapi_stream(request: Dict[str, Any]) -> Dict[str, Any]:
 
     elif message_type == "function-call":
         # Handle function calls from Vapi
-        function_name = request.get("function", {}).get("name", "unknown")
-        function_args = request.get("function", {}).get("arguments", {})
+        function_name = request.function.get("name", "unknown") if request.function else "unknown"
+        function_args = request.function.get("arguments", {}) if request.function else {}
         logger.info(f"Vapi: Function call - {function_name} with args: {function_args}")
         return {
             "result": f"Function {function_name} has been noted and is being processed."
@@ -119,9 +120,9 @@ async def vapi_stream(request: Dict[str, Any]) -> Dict[str, Any]:
 
     elif message_type == "end-of-call-report":
         # Process end of call summary
-        ended_reason = request.get("endedReason", "unknown")
-        transcript = request.get("transcript", "")
-        duration = request.get("duration", 0)
+        ended_reason = request.endedReason or "unknown"
+        transcript = request.transcript or ""
+        duration = request.duration or 0
         logger.info(
             f"Vapi: Call ended - reason={ended_reason}, duration={duration}s, "
             f"transcript_length={len(transcript)}"
@@ -130,7 +131,7 @@ async def vapi_stream(request: Dict[str, Any]) -> Dict[str, Any]:
 
     elif message_type == "status-update":
         # Handle status updates
-        status_msg = request.get("status", "unknown")
+        status_msg = request.status or "unknown"
         logger.info(f"Vapi: Status update - {status_msg}")
         return {"status": "ok"}
 

@@ -10,6 +10,7 @@ from typing import Dict, Any, List
 from fastapi import APIRouter, HTTPException, status
 
 from app.core.config import settings
+from app.api.schemas import EmailWebhookRequest, EmailWebhookResponse, InboxResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -58,8 +59,8 @@ def _poll_imap_inbox() -> List[Dict[str, Any]]:
         raise
 
 
-@router.post("/webhook")
-async def email_webhook(request: Dict[str, Any]) -> Dict[str, Any]:
+@router.post("/webhook", response_model=EmailWebhookResponse)
+async def email_webhook(request: EmailWebhookRequest) -> EmailWebhookResponse:
     """
     Email event webhook endpoint.
 
@@ -68,23 +69,23 @@ async def email_webhook(request: Dict[str, Any]) -> Dict[str, Any]:
 
     Supports flexible JSON payload formats.
     """
-    # Extract email data from various possible formats
+    # Extract email data from various possible formats using model fields
     from_addr = (
-        request.get("from") or
-        request.get("sender") or
-        request.get("From") or
+        request.from_ or
+        request.sender or
+        request.From or
         "unknown"
     )
     subject = (
-        request.get("subject") or
-        request.get("Subject") or
+        request.subject or
+        request.Subject or
         "(no subject)"
     )
     text_body = (
-        request.get("text") or
-        request.get("plain") or
-        request.get("body-plain") or
-        request.get("body") or
+        request.text or
+        request.plain or
+        request.body or
+        request.body_plain or
         ""
     )
 
@@ -102,16 +103,16 @@ async def email_webhook(request: Dict[str, Any]) -> Dict[str, Any]:
     # This would require linking the email to a user_id, which needs to be resolved
     # For now, we acknowledge receipt and log the data
 
-    return {
-        "status": "received",
-        "from": from_addr,
-        "subject": subject,
-        "message": "Email received and logged for processing"
-    }
+    return EmailWebhookResponse(
+        status="received",
+        from_addr=from_addr,
+        subject=subject,
+        message="Email received and logged for processing"
+    )
 
 
-@router.get("/inbox")
-async def get_inbox() -> Dict[str, Any]:
+@router.get("/inbox", response_model=InboxResponse)
+async def get_inbox() -> InboxResponse:
     """
     Poll IMAP inbox endpoint.
 
@@ -121,12 +122,12 @@ async def get_inbox() -> Dict[str, Any]:
     # Check if IMAP credentials are configured
     if not settings.IMAP_USERNAME or not settings.IMAP_PASSWORD:
         logger.warning("IMAP not configured - credentials missing")
-        return {
-            "status": "not_configured",
-            "message": "IMAP credentials not configured",
-            "count": 0,
-            "emails": []
-        }
+        return InboxResponse(
+            status="not_configured",
+            count=0,
+            emails=[],
+            message="IMAP credentials not configured"
+        )
 
     try:
         # Run IMAP polling in thread executor (IMAP is synchronous I/O)
@@ -135,11 +136,11 @@ async def get_inbox() -> Dict[str, Any]:
 
         logger.info(f"IMAP poll successful: found {len(emails)} unread emails")
 
-        return {
-            "status": "ok",
-            "count": len(emails),
-            "emails": emails
-        }
+        return InboxResponse(
+            status="ok",
+            count=len(emails),
+            emails=emails
+        )
 
     except imaplib.IMAP4.error as e:
         logger.error(f"IMAP connection error: {e}")
