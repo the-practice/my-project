@@ -1,19 +1,19 @@
 # Autonomous AI Operator - Python Dependencies
 
 # Core Framework
-fastapi==0.109.0
-uvicorn[standard]==0.27.0
-pydantic==2.5.3
-pydantic-settings==2.1.0
-python-multipart==0.0.6
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+pydantic>=2.5.3
+pydantic-settings>=2.1.0
+python-multipart>=0.0.6
 
 # Database
-asyncpg==0.29.0
-psycopg2-binary==2.9.9
-alembic==1.13.1
-sqlalchemy==2.0.25
-redis==5.0.1
-pgvector==0.2.5
+asyncpg>=0.30.0
+psycopg2-binary>=2.9.9
+alembic>=1.13.1
+sqlalchemy>=2.0.25
+redis>=5.0.1
+pgvector>=0.2.5
 
 # LLM & AI
 anthropic==0.18.1
@@ -64,9 +64,9 @@ jupyter==1.0.0
 ipdb==0.13.13
 
 # Optional: Web Scraping (fallback)
-playwright==1.40.0
-beautifulsoup4==4.12.3
-lxml==4.9.3
+playwright>=1.40.0
+beautifulsoup4>=4.12.3
+lxml>=5.0.0
 
 # Optional: Vector Database (alternative to pgvector)
 qdrant-client>=1.7.1
