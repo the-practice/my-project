@@ -2,7 +2,9 @@
 Application configuration settings.
 """
 
+import json
 from pydantic_settings import BaseSettings
+from pydantic import field_validator
 from typing import List
 
 
@@ -17,9 +19,14 @@ class Settings(BaseSettings):
     
     # API settings
     API_V1_STR: str = "/api/v1"
-    
-    # CORS settings
-    ALLOWED_ORIGINS: List[str] = ["*"]
+
+    # CORS settings - defaults to localhost for development
+    # Set via env var as: ALLOWED_ORIGINS=https://domain1.com,https://domain2.com (comma-separated)
+    # Or: ALLOWED_ORIGINS=["https://domain1.com","https://domain2.com"] (JSON array)
+    ALLOWED_ORIGINS: List[str] = [
+        "http://localhost:3000",
+        "http://localhost:8000",
+    ]
     
     # Database settings
     DATABASE_URL: str  # Required: must be provided via environment variable
@@ -50,7 +57,23 @@ class Settings(BaseSettings):
     # Task settings
     MAX_TASK_RETRIES: int = 3
     TASK_TIMEOUT_SECONDS: int = 300
-    
+
+    @field_validator("ALLOWED_ORIGINS", mode="before")
+    @classmethod
+    def parse_allowed_origins(cls, v):
+        """Parse ALLOWED_ORIGINS from env var as JSON array or comma-separated string."""
+        if isinstance(v, list):
+            return v
+        if isinstance(v, str):
+            v = v.strip()
+            # Try parsing as JSON array first
+            try:
+                return json.loads(v)
+            except (json.JSONDecodeError, ValueError):
+                # Fall back to comma-separated format
+                return [o.strip() for o in v.split(",") if o.strip()]
+        return v
+
     class Config:
         env_file = ".env"
         case_sensitive = True
