@@ -48,7 +48,25 @@ class Settings(BaseSettings):
     
     # ElevenLabs settings
     ELEVENLABS_API_KEY: str = ""
-    
+    ELEVENLABS_VOICE_ID: str = ""
+
+    # Email settings
+    IMAP_HOST: str = "imap.gmail.com"
+    IMAP_PORT: int = 993
+    IMAP_USERNAME: str = ""
+    IMAP_PASSWORD: str = ""
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: str = ""
+    SMTP_PASSWORD: str = ""
+    EMAIL_FROM: str = ""
+
+    # Extended voice settings
+    TWILIO_WEBHOOK_URL: str = ""
+    VAPI_BASE_URL: str = "https://api.vapi.ai"
+    VAPI_PROJECT_ID: str = ""
+    DEEPGRAM_API_KEY: str = ""
+
     # Security settings
     SECRET_KEY: str  # Required: must be provided via environment variable (use: openssl rand -hex 32)
     ALGORITHM: str = "HS256"
