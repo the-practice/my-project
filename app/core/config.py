@@ -22,8 +22,8 @@ class Settings(BaseSettings):
     ALLOWED_ORIGINS: List[str] = ["*"]
     
     # Database settings
-    DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/autonomous_ai_operator"
-    
+    DATABASE_URL: str  # Required: must be provided via environment variable
+
     # Redis settings
     REDIS_URL: str = "redis://localhost:6379/0"
     
@@ -43,7 +43,7 @@ class Settings(BaseSettings):
     ELEVENLABS_API_KEY: str = ""
     
     # Security settings
-    SECRET_KEY: str = "your-secret-key-change-this-in-production"
+    SECRET_KEY: str  # Required: must be provided via environment variable (use: openssl rand -hex 32)
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
