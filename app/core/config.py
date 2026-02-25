@@ -84,6 +84,9 @@ class Settings(BaseSettings):
             return v
         if isinstance(v, str):
             v = v.strip()
+            # If empty, return default localhost values
+            if not v:
+                return ["http://localhost:3000", "http://localhost:8000"]
             # Try parsing as JSON array first
             try:
                 return json.loads(v)
