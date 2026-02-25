@@ -1,0 +1,79 @@
+# Autonomous AI Operator - Python Dependencies
+
+# Core Framework
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+pydantic==2.5.3
+pydantic-settings==2.1.0
+python-multipart==0.0.6
+
+# Database
+asyncpg==0.29.0
+psycopg2-binary==2.9.9
+alembic==1.13.1
+sqlalchemy==2.0.25
+redis==5.0.1
+pgvector==0.2.5
+
+# LLM & AI
+anthropic==0.18.1
+openai==1.10.0
+
+# Web & HTTP
+httpx==0.26.0
+aiohttp==3.9.1
+requests==2.31.0
+twilio==8.13.0
+
+# Email
+aiosmtplib==3.0.1
+email-validator==2.1.0
+
+# Security
+cryptography==41.0.7
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-dotenv==1.0.0
+
+# Utilities
+python-dateutil==2.8.2
+pytz==2023.3
+pydantic[email]==2.5.3
+
+# Monitoring & Logging
+structlog==24.1.0
+sentry-sdk[fastapi]==1.40.0
+prometheus-client==0.19.0
+
+# Testing
+pytest==7.4.4
+pytest-asyncio==0.23.3
+pytest-cov==4.1.0
+httpx==0.26.0
+pytest-mock==3.12.0
+
+# Code Quality
+ruff==0.1.14
+mypy==1.8.0
+black==24.1.1
+isort==5.13.2
+
+# Development
+ipython==8.20.0
+jupyter==1.0.0
+ipdb==0.13.13
+
+# Optional: Web Scraping (fallback)
+playwright==1.40.0
+beautifulsoup4==4.12.3
+lxml==4.9.3
+
+# Optional: Vector Database (alternative to pgvector)
+qdrant-client==1.7.0
+
+# Optional: Message Queue (for async processing)
+celery==5.3.6
+redis==5.0.1
+
+# Optional: Task Queue
+celery[redis]==5.3.6

@@ -1,0 +1,79 @@
+name: Deploy to AWS
+
+on:
+  push:
+    branches: [main]
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: autonomous-ai-operator
+  ECS_CLUSTER: autonomous-ai-operator
+  ECS_SERVICE: autonomous-ai-operator-service
+
+jobs:
+  deploy:
+    name: Deploy to AWS ECS
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push image to ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+      - name: Render task definition
+        id: render-taskdef
+        run: |
+          TASK_DEFINITION=$(aws ecs describe-task-definition --task-definition ${{ env.ECS_SERVICE }} --region ${{ env.AWS_REGION }})
+          NEW_TASK_DEF=$(echo $TASK_DEFINITION | jq --arg IMAGE $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG '.taskDefinition | .containerDefinitions[0].image = $IMAGE | del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
+          echo "TASK_DEFINITION_JSON=$NEW_TASK_DEF" >> $GITHUB_OUTPUT
+
+      - name: Register task definition
+        id: register-taskdef
+        run: |
+          TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json file://<(echo '${{ steps.render-taskdef.outputs.TASK_DEFINITION_JSON }}') --region ${{ env.AWS_REGION }} | jq -r '.taskDefinition.taskDefinitionArn')
+          echo "TASK_DEF_ARN=$TASK_DEF_ARN" >> $GITHUB_OUTPUT
+
+      - name: Deploy to ECS
+        id: deploy
+        run: |
+          aws ecs update-service --cluster ${{ env.ECS_CLUSTER }} --service ${{ env.ECS_SERVICE }} --task-definition ${{ steps.register-taskdef.outputs.TASK_DEF_ARN }} --force-new-deployment --region ${{ env.AWS_REGION }}
+
+      - name: Wait for deployment
+        run: |
+          aws ecs wait services-stable --cluster ${{ env.ECS_CLUSTER }} --service ${{ env.ECS_SERVICE }} --region ${{ env.AWS_REGION }}
+
+      - name: Get deployment status
+        run: |
+          aws ecs describe-services --cluster ${{ env.ECS_CLUSTER }} --service ${{ env.ECS_SERVICE }} --region ${{ env.AWS_REGION }} --query 'services[0].deployments[0].status' --output text
+
+      - name: Notify on success
+        if: success()
+        run: |
+          echo "Deployment successful! Service: ${{ env.ECS_SERVICE }}"
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "Deployment failed! Please check the logs."
+          exit 1

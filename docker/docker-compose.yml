@@ -1,0 +1,148 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: autonomous-ai-operator-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: autonomous_ai_operator
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - autonomous-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: autonomous-ai-operator-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - autonomous-network
+
+  # FastAPI Application
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: autonomous-ai-operator-app
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/autonomous_ai_operator
+      - REDIS_URL=redis://redis:6379/0
+      - APP_ENV=development
+      - DEBUG=true
+      - LOG_LEVEL=DEBUG
+    ports:
+      - "8000:8000"
+    volumes:
+      - ..:/app
+      - /app/__pycache__
+      - /app/.pytest_cache
+      - /app/.ruff_cache
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - autonomous-network
+    command: uvicorn autonomous_ai_operator.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # IMAP Email Listener Worker
+  email-worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: autonomous-ai-operator-email-worker
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/autonomous_ai_operator
+      - REDIS_URL=redis://redis:6379/0
+      - APP_ENV=development
+      - DEBUG=true
+      - LOG_LEVEL=DEBUG
+      - ENABLE_EMAIL=true
+    volumes:
+      - ..:/app
+      - /app/__pycache__
+      - /app/.pytest_cache
+      - /app/.ruff_cache
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - autonomous-network
+    command: uvicorn autonomous_ai_operator.interactions.email.imap_listener:worker --host 0.0.0.0 --port 8001 --reload
+
+  # Vapi Voice Stream Handler
+  vapi-worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: autonomous-ai-operator-vapi-worker
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/autonomous_ai_operator
+      - REDIS_URL=redis://redis:6379/0
+      - APP_ENV=development
+      - DEBUG=true
+      - LOG_LEVEL=DEBUG
+      - ENABLE_VOICE=true
+    volumes:
+      - ..:/app
+      - /app/__pycache__
+      - /app/.pytest_cache
+      - /app/.ruff_cache
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - autonomous-network
+    command: uvicorn autonomous_ai_operator.interactions.voice.vapi_orchestrator:worker --host 0.0.0.0 --port 8002 --reload
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: autonomous-ai-operator-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - app
+      - email-worker
+      - vapi-worker
+    networks:
+      - autonomous-network
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  autonomous-network:
+    driver: bridge
