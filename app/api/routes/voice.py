@@ -26,21 +26,28 @@ async def twilio_webhook(request: Request) -> Dict[str, str]:
     # Get request body for signature validation
     body = await request.body()
 
-    # Validate Twilio request signature (skip if AUTH_TOKEN not configured)
-    if settings.TWILIO_AUTH_TOKEN:
-        validator = RequestValidator(settings.TWILIO_AUTH_TOKEN)
-        twilio_signature = request.headers.get("X-Twilio-Signature", "")
-        request_url = str(request.url)
+    # Validate Twilio request signature - REQUIRED for security
+    # This must never be optional in production to prevent webhook spoofing
+    if not settings.TWILIO_AUTH_TOKEN:
+        logger.error("TWILIO_AUTH_TOKEN not configured - cannot validate webhook signature")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Twilio integration not configured"
+        )
 
-        # Parse form data for validation
-        form_data = await request.form()
+    validator = RequestValidator(settings.TWILIO_AUTH_TOKEN)
+    twilio_signature = request.headers.get("X-Twilio-Signature", "")
+    request_url = str(request.url)
 
-        if not validator.validate(request_url, form_data, twilio_signature):
-            logger.warning(f"Invalid Twilio signature from {request.client}")
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Invalid Twilio signature"
-            )
+    # Parse form data for validation
+    form_data = await request.form()
+
+    if not validator.validate(request_url, form_data, twilio_signature):
+        logger.warning(f"Invalid Twilio signature from {request.client}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid Twilio signature"
+        )
 
     # Parse form data
     form_data = await request.form()

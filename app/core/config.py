@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379/0"
     
     # Anthropic API settings
-    ANTHROPIC_API_KEY: str = ""
+    ANTHROPIC_API_KEY: str = ""  # Required for Vapi voice integration
     
     # Twilio settings
     TWILIO_ACCOUNT_SID: str = ""
