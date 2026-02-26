@@ -4,7 +4,7 @@ Application configuration settings.
 
 import json
 from pydantic_settings import BaseSettings
-from pydantic import field_validator, model_validator
+from pydantic import Field, model_validator
 from typing import List
 from typing_extensions import Self
 
@@ -24,8 +24,11 @@ class Settings(BaseSettings):
     # CORS settings - defaults to localhost for development
     # Set via env var as: ALLOWED_ORIGINS=https://domain1.com,https://domain2.com (comma-separated)
     # Or: ALLOWED_ORIGINS=["https://domain1.com","https://domain2.com"] (JSON array)
-    ALLOWED_ORIGINS_RAW: str = "http://localhost:3000,http://localhost:8000"
-    ALLOWED_ORIGINS: List[str] = []
+    ALLOWED_ORIGINS_RAW: str = Field(
+        default="http://localhost:3000,http://localhost:8000",
+        validation_alias="ALLOWED_ORIGINS"
+    )
+    ALLOWED_ORIGINS: List[str] = Field(default_factory=list)
     
     # Database settings
     DATABASE_URL: str  # Required: must be provided via environment variable
