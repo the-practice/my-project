@@ -28,7 +28,10 @@ class Settings(BaseSettings):
         default="http://localhost:3000,http://localhost:8000",
         validation_alias="ALLOWED_ORIGINS"
     )
-    ALLOWED_ORIGINS: List[str] = Field(default_factory=list)
+    ALLOWED_ORIGINS: List[str] = Field(
+        default_factory=list,
+        validation_alias="_unused_allowed_origins"
+    )
     
     # Database settings
     DATABASE_URL: str  # Required: must be provided via environment variable
